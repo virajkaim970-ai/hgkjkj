@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>📄 PDF → PYQ Converter</title>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+:root{--bg:#0f1216;--p:#181c24;--p2:#1e242e;--ink:#e8e0d0;--ink2:#b8a890;--mut:#7a7565;--ln:#2a3140;--ln2:#3a4252;--acc:#d4a05a;--grn:#8fc47a;--red:#e08080;--blu:#8ab0d0;--pur:#a78bfa}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,system-ui,sans-serif;padding:16px;max-width:1200px;margin:auto}
+header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--ln)}
+.logo{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#4a6b8a,#5a7d3f);display:grid;place-items:center;font-size:22px}
+h1{font-size:18px;font-weight:700}
+h1 small{display:block;font-size:11.5px;color:var(--mut);font-weight:400;margin-top:2px}
+.card{background:var(--p);border:1px solid var(--ln);border-radius:12px;padding:16px;margin-bottom:14px}
+.card h3{font-size:12.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.card h3::before{content:'❋';color:var(--acc);font-size:11px}
+.dropzone{border:2.5px dashed var(--ln2);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:.2s;background:var(--p2)}
+.dropzone:hover,.dropzone.over{background:#1f2a3a;border-color:var(--acc)}
+.dropzone .icon{font-size:44px;margin-bottom:10px;opacity:.7}
+.dropzone .title{font-size:15px;font-weight:600;margin-bottom:5px}
+.dropzone .hint{font-size:12px;color:var(--mut)}
+input[type=file]{display:none}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-size:13px;padding:9px 15px;border-radius:9px;cursor:pointer;border:1px solid var(--ln2);background:var(--p2);color:var(--ink);transition:.15s;font-weight:500}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.pri{background:linear-gradient(135deg,#4a6b8a,#5a7d3f);color:#fff;border:0;font-weight:600}
+.btn.pri:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.status{font-size:12.5px;color:var(--mut);margin-left:8px}
+.progress{height:6px;background:var(--ln);border-radius:99px;overflow:hidden;margin-top:12px;display:none}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,#5a7d3f,#4a6b8a);width:0;transition:width .3s}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:14px}
+.stat{background:var(--p2);border:1px solid var(--ln);border-radius:10px;padding:11px}
+.stat .lbl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.7px;font-weight:600}
+.stat .vl{font-size:22px;font-weight:700;margin-top:4px;color:var(--acc)}
+.qitem{background:var(--p2);border:1px solid var(--ln);border-radius:10px;padding:12px;margin-bottom:9px;border-left:3px solid var(--grn)}
+.qitem.bad{border-left-color:var(--red)}
+.qitem.warn{border-left-color:var(--acc)}
+.qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;font-size:11.5px;color:var(--mut)}
+.qhead .num{background:var(--p);padding:3px 9px;border-radius:99px;font-weight:700;color:var(--ink2)}
+.qtext{font-size:13.5px;line-height:1.55;margin-bottom:10px;color:var(--ink);padding:9px;background:var(--p);border-radius:7px;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+.opt{display:flex;gap:8px;align-items:center;padding:6px 9px;background:var(--p);border-radius:6px;margin-bottom:4px;font-size:12.5px}
+.opt .letter{width:22px;height:22px;border-radius:50%;background:var(--p2);display:grid;place-items:center;font-weight:700;font-size:10.5px;flex:none;color:var(--ink2)}
+.opt.correct{background:rgba(143,196,122,.15);color:var(--grn);font-weight:600}
+.opt.correct .letter{background:var(--grn);color:#0f1216}
+.opt input{flex:1;background:transparent;border:0;color:inherit;font:inherit;font-size:12.5px;outline:none;padding:3px 5px;border-radius:5px}
+.opt input:focus{background:var(--p2)}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid var(--ln)}
+.controls label{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:3px;display:block}
+.controls select,.controls input{width:100%;background:var(--p);border:1px solid var(--ln);border-radius:7px;padding:7px 9px;color:var(--ink);font:inherit;font-size:12.5px;outline:none}
+.controls select:focus,.controls input:focus{border-color:var(--acc)}
+.controls input[type=text]{font-size:12px}
+.delBtn{background:rgba(224,128,128,.15);color:var(--red);border:1px solid rgba(224,128,128,.3);font-size:11px;padding:4px 9px;border-radius:6px;cursor:pointer;font-weight:600}
+.delBtn:hover{background:var(--red);color:#0f1216}
+.preview{background:#0a0e14;color:#8fc47a;border-radius:9px;padding:14px;font-family:'Courier New',monospace;font-size:11.5px;line-height:1.7;max-height:340px;overflow-y:auto;white-space:pre;border:1px solid var(--ln)}
+.preview .cmt{color:#5a6b7a}
+.empty{text-align:center;color:var(--mut);padding:40px 20px;font-size:13px}
+.empty .big{font-size:44px;margin-bottom:8px;opacity:.35}
+select.filter{background:var(--p2);border:1px solid var(--ln);border-radius:8px;padding:7px 11px;color:var(--ink);font:inherit;font-size:12.5px;outline:none;cursor:pointer}
+textarea{font:inherit}
+#answerKey{width:100%;font-family:monospace;font-size:12px;background:var(--p2);border:1px solid var(--ln);border-radius:8px;padding:9px;color:var(--ink);outline:none;resize:vertical;line-height:1.5}
+#answerKey:focus{border-color:var(--acc)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,100px);background:var(--ink);color:var(--bg);padding:11px 20px;border-radius:10px;font-size:13px;opacity:0;transition:.3s;pointer-events:none;z-index:9999;font-weight:500}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📄</div>
+  <div>
+    <h1>PDF → PYQ Converter
+      <small>Upload a JEE book/chapter PDF → get questions in Study Tracker format</small>
+    </h1>
+  </div>
+</header>
+
+<!-- UPLOAD -->
+<div class="card">
+  <h3>Step 1 — Upload PDF</h3>
+  <div class="dropzone" id="dropzone">
+    <div class="icon">📄</div>
+    <div class="title">Drop PDF here or click to browse</div>
+    <div class="hint">Text-based PDFs work best · Scanned images may need OCR · Max 100MB</div>
+    <input type="file" id="fileIn" accept=".pdf,application/pdf">
+  </div>
+  <div class="progress" id="progressBar"><i></i></div>
+  <div class="row" style="margin-top:12px">
+    <span class="status" id="status">Ready — waiting for PDF</span>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="card">
+  <h3>Step 2 — Detection Settings</h3>
+  <div class="row" style="margin-bottom:10px">
+    <label style="font-size:12px;color:var(--ink2);font-weight:600">Default Subject:</label>
+    <select class="filter" id="defSub">
+      <option value="Physics">Physics</option>
+      <option value="Physical Chemistry">Physical Chemistry</option>
+      <option value="Organic Chemistry">Organic Chemistry</option>
+      <option value="Inorganic Chemistry">Inorganic Chemistry</option>
+      <option value="Mathematics">Mathematics</option>
+      <option value="">Auto-detect</option>
+    </select>
+    <label style="font-size:12px;color:var(--ink2);font-weight:600">Default Level:</label>
+    <select class="filter" id="defLevel">
+      <option value="mains">📗 Mains</option>
+      <option value="advanced">📕 Advanced</option>
+      <option value="both">📘 Both</option>
+    </select>
+    <label style="font-size:12px;color:var(--ink2);font-weight:600">Default Chapter:</label>
+    <input type="text" id="defChap" class="filter" placeholder="e.g. Rotational Motion" style="min-width:180px">
+  </div>
+  <div class="row" style="font-size:12px;color:var(--mut);margin-bottom:12px">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" id="optAutoSub" checked style="width:auto"> Auto-detect subject from keywords
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:14px">
+      <input type="checkbox" id="optStripHeader" checked style="width:auto"> Strip page headers/footers
+    </label>
+  </div>
+
+  <div style="padding-top:12px;border-top:1px solid var(--ln)">
+    <label style="font-size:11.5px;color:var(--ink2);font-weight:600;display:block;margin-bottom:5px">
+      🎯 Answer Key (optional) — paste answers from the back of the book
+    </label>
+    <textarea id="answerKey" rows="2" placeholder="1. B   2. C   3. A   4. D   5. B   6. D  …  OR  1-B, 2-C, 3-A, 4-D"></textarea>
+    <div class="row" style="margin-top:6px">
+      <button class="btn" id="applyAnswersBtn">🔗 Apply to Questions</button>
+      <span class="status" id="answerStatus">No answer key loaded</span>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="resultsBox" style="display:none">
+  <div class="stats" id="statsBar"></div>
+
+  <div class="card">
+    <h3>Step 3 — Review & Edit Questions</h3>
+    <div class="row" style="margin-bottom:12px">
+      <select class="filter" id="filterSub">
+        <option value="">All Subjects</option>
+        <option value="Physics">Physics</option>
+        <option value="Physical Chemistry">Physical Chemistry</option>
+        <option value="Organic Chemistry">Organic Chemistry</option>
+        <option value="Inorganic Chemistry">Inorganic Chemistry</option>
+        <option value="Mathematics">Mathematics</option>
+        <option value="Other">Other</option>
+      </select>
+      <select class="filter" id="filterStatus">
+        <option value="">All Statuses</option>
+        <option value="good">✅ Complete</option>
+        <option value="warn">⚠️ Missing fields</option>
+        <option value="bad">❌ Broken</option>
+      </select>
+      <button class="btn" id="autoSubjectBtn">🎯 Re-detect Subjects</button>
+      <button class="btn" id="delSelectedBtn" style="margin-left:auto">🗑️ Delete Filtered</button>
+    </div>
+    <div id="qlist"></div>
+  </div>
+
+  <div class="card">
+    <h3>Step 4 — Preview & Export</h3>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn pri" id="copyBtn">📋 Copy All</button>
+      <button class="btn pri" id="downloadBtn">⬇️ Download .txt</button>
+      <button class="btn" id="clearBtn">🗑️ Start Over</button>
+      <span class="status" id="exportStatus"></span>
+    </div>
+    <div class="preview" id="previewBox"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   PDF → PYQ Converter (with Answer Key matcher)
+   ═══════════════════════════════════════════════════════════ */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+let questions = [];
+let questionNumbers = [];   /* original numbers from PDF, parallel to questions[] */
+let rawText = "";
+
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(t._);
+  t._ = setTimeout(()=>t.classList.remove("on"), 2400);
+}
+
+/* ═══ 1. FILE UPLOAD ═══ */
+const dz = $("#dropzone");
+const fi = $("#fileIn");
+dz.onclick = () => fi.click();
+dz.ondragover = e => { e.preventDefault(); dz.classList.add("over"); };
+dz.ondragleave = () => dz.classList.remove("over");
+dz.ondrop = e => {
+  e.preventDefault();
+  dz.classList.remove("over");
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === "application/pdf") handleFile(f);
+};
+fi.onchange = e => {
+  const f = e.target.files[0];
+  if (f) handleFile(f);
+  e.target.value = "";
+};
+
+/* ═══ 2. PDF EXTRACTION ═══ */
+async function handleFile(file){
+  $("#status").textContent = `📄 Reading ${file.name}…`;
+  $("#progressBar").style.display = "block";
+  $("#progressBar i").style.width = "5%";
+  $("#resultsBox").style.display = "none";
+
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const total = pdf.numPages;
+    let text = "";
+
+    for (let p = 1; p <= total; p++){
+      $("#status").textContent = `📖 Extracting page ${p} / ${total}…`;
+      $("#progressBar i").style.width = `${5 + (p / total) * 70}%`;
+
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+
+      /* Reconstruct lines by Y position */
+      const lines = {};
+      content.items.forEach(it => {
+        const y = Math.round(it.transform[5]);
+        (lines[y] = lines[y] || []).push(it.str);
+      });
+
+      const pageText = Object.keys(lines)
+        .sort((a, b) => b - a)
+        .map(y => lines[y].join(" ").replace(/\s+/g, " ").trim())
+        .filter(l => l.length)
+        .join("\n");
+
+      text += pageText + "\n\n";
+      await new Promise(r => setTimeout(r, 0));
+    }
+
+    if ($("#optStripHeader").checked) text = stripHeaders(text);
+
+    rawText = text;
+    $("#progressBar i").style.width = "80%";
+    $("#status").textContent = `🔍 Extracted ${text.length} chars — parsing questions…`;
+
+    questions = parseQuestions(text);
+    questionNumbers = questions.map(q => q.pdfNum || 0);
+
+    $("#progressBar i").style.width = "100%";
+    $("#status").textContent = `✅ Found ${questions.length} questions`;
+
+    if (!questions.length){
+      $("#resultsBox").style.display = "block";
+      $("#qlist").innerHTML = '<div class="empty"><div class="big">🤔</div>No questions auto-detected.<br><small>Try adjusting the PDF or manually editing. Raw text dumped below.</small></div>';
+      $("#previewBox").textContent = text.slice(0, 5000);
+    } else {
+      renderQuestions();
+      renderPreview();
+      $("#resultsBox").style.display = "block";
+    }
+
+    setTimeout(() => { $("#progressBar").style.display = "none"; }, 900);
+  } catch (e){
+    console.error(e);
+    $("#status").textContent = "❌ PDF read failed — try a different file";
+    $("#progressBar").style.display = "none";
+    toast("❌ Failed to read PDF");
+  }
+}
+
+/* ═══ 3. STRIP PAGE HEADERS / FOOTERS ═══ */
+function stripHeaders(text){
+  const lines = text.split("\n");
+  const counter = {};
+  lines.forEach(l => {
+    const t = l.trim();
+    if (t.length > 3 && t.length < 80) counter[t] = (counter[t] || 0) + 1;
+  });
+  const junk = new Set(Object.keys(counter).filter(k => counter[k] >= 5));
+  return lines.filter(l => !junk.has(l.trim())).join("\n");
+}
+
+/* ═══ 4. QUESTION PARSER ═══ */
+function parseQuestions(text){
+  const out = [];
+  const seen = new Set();
+
+  const patterns = [
+    /* "1. Question ... (A) opt (B) opt (C) opt (D) opt" */
+    /(?:^|\n)\s*(?:Q\.?\s*)?(\d{1,3})\s*[\.\)]\s*([\s\S]*?)(?=\n\s*(?:Q\.?\s*)?\d{1,3}\s*[\.\)]|\n\s*Answer|\n\s*Sol|$)/g,
+    /* "Q1) ..." */
+    /(?:^|\n)\s*Q\s*\.?\s*(\d{1,3})\s*[\.\):]\s*([\s\S]*?)(?=\n\s*Q\s*\.?\s*\d{1,3}|\n\s*Answer|$)/gi,
+    /* "(1) ..." */
+    /(?:^|\n)\s*\((\d{1,3})\)\s*([\s\S]*?)(?=\n\s*\(\d{1,3}\)|\n\s*Answer|$)/g
+  ];
+
+  patterns.forEach(rx => {
+    let m;
+    rx.lastIndex = 0;
+    while ((m = rx.exec(text)) !== null){
+      const block = m[2];
+      const q = extractFromBlock(block);
+      if (!q) continue;
+      const key = q.text.slice(0, 100).toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      q.pdfNum = parseInt(m[1]);
+      out.push(q);
+    }
+  });
+
+  return out;
+}
+
+function extractFromBlock(block){
+  let opts = [];
+
+  /* Format 1: (A) text */
+  let m = [...block.matchAll(/\(([A-Da-d])\)\s*([^\n(]+)/g)];
+  if (m.length >= 4) opts = m.slice(0, 4).map(x => x[2].trim());
+
+  /* Format 2: A) text or A. text */
+  if (opts.length < 4){
+    m = [...block.matchAll(/(?:^|\s)([A-Da-d])\s*[\.\)]\s*([^\n]+)/g)];
+    if (m.length >= 4) opts = m.slice(0, 4).map(x => x[2].trim());
+  }
+
+  /* Format 3: 1) text  2) text ... */
+  if (opts.length < 4){
+    m = [...block.matchAll(/(?:^|\n)\s*\(?([1-4])\)?\s*[\.\)]\s*([^\n]+)/g)];
+    if (m.length >= 4) opts = m.slice(0, 4).map(x => x[2].trim());
+  }
+
+  if (opts.length < 4) return null;
+
+  const stem = block
+    .split(/\([A-Da-d]\)|(?:^|\s)[A-Da-d]\s*[\.\)]/)[0]
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (stem.length < 10) return null;
+
+  const sub = $("#optAutoSub").checked ? detectSubject(stem) : ($("#defSub").value || "Physics");
+  const chap = $("#defChap").value.trim() || "Uncategorized";
+
+  /* Auto-detect correct if inline */
+  let correct = 0;
+  const ansMatch = block.match(/(?:Answer|Ans|Correct)[\s:.]*\(?([A-Da-d1-4])\)?/i);
+  if (ansMatch){
+    const a = ansMatch[1].toUpperCase();
+    if (["A","B","C","D"].includes(a)) correct = a.charCodeAt(0) - 65;
+    else if (["1","2","3","4"].includes(a)) correct = parseInt(a) - 1;
+  }
+
+  const yearMatch = block.match(/(JEE|AIEEE|IIT)[\s\-]*(?:Main|Advanced|JEE)?[\s\-]*(\d{4})/i);
+  const year = yearMatch ? parseInt(yearMatch[2]) : null;
+
+  return { text: stem, options: opts, correct, sub, chap, year, level: $("#defLevel").value };
+}
+
+function detectSubject(t){
+  const l = t.toLowerCase();
+  const rules = [
+    { sub: "Physics", rx: /\b(force|velocity|acceleration|momentum|energy|friction|gravitation|circuit|current|resistance|voltage|capacitor|magnetic|optics|lens|mirror|wave|sound|thermodynamic|entropy|oscillat|pendulum|projectile|incline|newton|joule|watt|ohm|ampere|volt|tesla|farad|henry|planck|photon|atom|nucleus|semiconductor|diode|transistor)\b/i },
+    { sub: "Physical Chemistry", rx: /\b(mole|avogadro|molarity|molality|normality|orbital|quantum number|electronegativity|thermochem|enthalpy|gibbs|equilibrium|pH|buffer|ksp|redox|electrochem|kinetics|rate constant|solid state|solution|colligative|nernst|faraday|emf|activation energy)\b/i },
+    { sub: "Organic Chemistry", rx: /\b(organic|alkane|alkene|alkyne|benzene|aromatic|alcohol|phenol|ether|aldehyde|ketone|carboxylic|ester|amine|amide|nitro|halide|sn1|sn2|markovnikov|isomer|stereo|chiral|goc|resonance|hyperconjugation|hydrocarbon)\b/i },
+    { sub: "Inorganic Chemistry", rx: /\b(periodic table|s-block|p-block|d-block|f-block|transition|lanthanide|actinide|coordination|ligand|complex|hybridization|vsepr|mot|metallurgy|ore|extraction|qualitative analysis|cation|anion)\b/i },
+    { sub: "Mathematics", rx: /\b(matrix|matrices|determinant|integral|integration|derivative|differentiat|limit|continuity|vector|scalar|dot product|cross product|probability|permutation|combination|binomial|sequence|series|complex number|quadratic|trigonometric|sin|cos|tan|cot|sec|cosec|logarithm|conic|parabola|ellipse|hyperbola|straight line|3d geometry)\b/i }
+  ];
+  for (const r of rules) if (r.rx.test(l)) return r.sub;
+  return "Physics";
+}
+
+/* ═══ 5. RENDER QUESTIONS ═══ */
+function renderQuestions(){
+  const subF = $("#filterSub").value;
+  const statusF = $("#filterStatus").value;
+
+  const filtered = questions.map((q, i) => ({ q, i })).filter(({ q }) => {
+    if (subF && q.sub !== subF) return false;
+    const status = qStatus(q);
+    if (statusF && status !== statusF) return false;
+    return true;
+  });
+
+  if (!filtered.length){
+    $("#qlist").innerHTML = '<div class="empty"><div class="big">🔍</div>No questions match filters</div>';
+    return;
+  }
+
+  $("#qlist").innerHTML = filtered.map(({ q, i }) => {
+    const status = qStatus(q);
+    const cls = status === "good" ? "" : status === "warn" ? "warn" : "bad";
+    const statusLabel = status === "good" ? "✅ Complete" : status === "warn" ? "⚠️ Check" : "❌ Broken";
+    return `<div class="qitem ${cls}" data-idx="${i}">
+      <div class="qhead">
+        <span><span class="num">Q${i + 1}${q.pdfNum ? ` (book #${q.pdfNum})` : ''}</span> ${statusLabel}</span>
+        <button class="delBtn" data-del="${i}">🗑️ Delete</button>
+      </div>
+      <div class="qtext">${escapeHtml(q.text)}</div>
+      ${q.options.map((o, j) => `
+        <div class="opt ${j === q.correct ? 'correct' : ''}">
+          <span class="letter">${String.fromCharCode(65 + j)}</span>
+          <input type="text" value="${escapeAttr(o)}" data-edit="opt" data-idx="${i}" data-opt="${j}">
+        </div>
+      `).join("")}
+      <div class="controls">
+        <div>
+          <label>Subject</label>
+          <select data-edit="sub" data-idx="${i}">
+            ${["Physics","Physical Chemistry","Organic Chemistry","Inorganic Chemistry","Mathematics","Other"]
+              .map(s => `<option ${q.sub === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label>Chapter</label>
+          <input type="text" value="${escapeAttr(q.chap)}" data-edit="chap" data-idx="${i}">
+        </div>
+        <div>
+          <label>Correct Answer</label>
+          <select data-edit="correct" data-idx="${i}">
+            ${[0,1,2,3].map(n => `<option value="${n}" ${q.correct === n ? "selected" : ""}>${String.fromCharCode(65+n)}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label>Year</label>
+          <input type="text" value="${q.year || ''}" data-edit="year" data-idx="${i}" placeholder="2023">
+        </div>
+        <div>
+          <label>Level</label>
+          <select data-edit="level" data-idx="${i}">
+            <option value="mains" ${q.level === "mains" ? "selected" : ""}>📗 Mains</option>
+            <option value="advanced" ${q.level === "advanced" ? "selected" : ""}>📕 Advanced</option>
+            <option value="both" ${q.level === "both" ? "selected" : ""}>📘 Both</option>
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const total = questions.length;
+  const good = questions.filter(q => qStatus(q) === "good").length;
+  const warn = questions.filter(q => qStatus(q) === "warn").length;
+  const bad = questions.filter(q => qStatus(q) === "bad").length;
+
+  $("#statsBar").innerHTML = `
+    <div class="stat"><div class="lbl">Total</div><div class="vl">${total}</div></div>
+    <div class="stat"><div class="lbl">✅ Complete</div><div class="vl" style="color:var(--grn)">${good}</div></div>
+    <div class="stat"><div class="lbl">⚠️ Needs Review</div><div class="vl" style="color:var(--acc)">${warn}</div></div>
+    <div class="stat"><div class="lbl">❌ Broken</div><div class="vl" style="color:var(--red)">${bad}</div></div>`;
+}
+
+function qStatus(q){
+  if (!q.text || q.text.length < 10) return "bad";
+  if (!q.options || q.options.length < 4) return "bad";
+  if (q.options.some(o => !o || o.length < 1)) return "warn";
+  return "good";
+}
+
+/* ═══ 6. EDIT HANDLERS ═══ */
+$("#qlist").addEventListener("input", e => {
+  const t = e.target;
+  if (!t.dataset.edit) return;
+  const i = +t.dataset.idx;
+  const q = questions[i];
+  if (!q) return;
+
+  const field = t.dataset.edit;
+  if (field === "opt") q.options[+t.dataset.opt] = t.value;
+  else if (field === "chap") q.chap = t.value;
+  else if (field === "year") q.year = t.value ? parseInt(t.value) : null;
+
+  if (field === "opt"){
+    const item = t.closest(".qitem");
+    item.querySelectorAll(".opt").forEach((el, j) => {
+      el.classList.toggle("correct", j === q.correct);
+    });
+  }
+
+  renderPreview();
+});
+
+$("#qlist").addEventListener("change", e => {
+  const t = e.target;
+  if (!t.dataset.edit) return;
+  const i = +t.dataset.idx;
+  const q = questions[i];
+  if (!q) return;
+
+  const field = t.dataset.edit;
+  if (field === "sub") q.sub = t.value;
+  if (field === "correct") q.correct = +t.value;
+  if (field === "level") q.level = t.value;
+
+  renderQuestions();
+  renderPreview();
+});
+
+$("#qlist").addEventListener("click", e => {
+  const t = e.target;
+  if (t.dataset.del !== undefined){
+    const i = +t.dataset.del;
+    questions.splice(i, 1);
+    questionNumbers.splice(i, 1);
+    renderQuestions();
+    renderPreview();
+    toast("🗑️ Question deleted");
+  }
+});
+
+/* ═══ 7. FILTERS ═══ */
+$("#filterSub").onchange = renderQuestions;
+$("#filterStatus").onchange = renderQuestions;
+
+$("#autoSubjectBtn").onclick = () => {
+  questions.forEach(q => { q.sub = detectSubject(q.text); });
+  renderQuestions();
+  renderPreview();
+  toast("🎯 Subjects re-detected");
+};
+
+$("#delSelectedBtn").onclick = () => {
+  const subF = $("#filterSub").value;
+  const statusF = $("#filterStatus").value;
+  if (!subF && !statusF){ toast("⚠️ Select a filter first"); return; }
+
+  const before = questions.length;
+  const kept = [], keptNums = [];
+  questions.forEach((q, i) => {
+    let remove = false;
+    if (subF && q.sub === subF) remove = true;
+    if (statusF && qStatus(q) === statusF) remove = true;
+    if (!remove){ kept.push(q); keptNums.push(questionNumbers[i]); }
+  });
+  questions = kept;
+  questionNumbers = keptNums;
+  const removed = before - questions.length;
+  renderQuestions();
+  renderPreview();
+  toast(`🗑️ Deleted ${removed} questions`);
+};
+
+/* ═══ 8. ANSWER KEY MATCHER ═══ */
+function parseAnswerKey(text){
+  const map = {};
+  const patterns = [
+    /(\d{1,3})\s*[\.\-\)\:]\s*\(?([A-Da-d])\)?/g,
+    /(\d{1,3})\s+([A-Da-d])(?=\s|$)/g,
+    /(\d{1,3})\s*[\.\-\)\:]\s*\(?([1-4])\)?/g
+  ];
+  patterns.forEach(rx => {
+    let m;
+    while ((m = rx.exec(text)) !== null){
+      const num = parseInt(m[1]);
+      const raw = m[2].toUpperCase();
+      let idx = -1;
+      if (["A","B","C","D"].includes(raw)) idx = raw.charCodeAt(0) - 65;
+      else if (["1","2","3","4"].includes(raw)) idx = parseInt(raw) - 1;
+      if (idx >= 0 && idx <= 3 && map[num] === undefined) map[num] = idx;
+    }
+  });
+  return map;
+}
+
+$("#applyAnswersBtn").onclick = () => {
+  const keyText = $("#answerKey").value.trim();
+  if (!keyText){ toast("⚠️ Paste an answer key first"); return; }
+  if (!questions.length){ toast("⚠️ No questions loaded yet"); return; }
+
+  const ansMap = parseAnswerKey(keyText);
+  const total = Object.keys(ansMap).length;
+  if (!total){ toast("❌ No answers detected — check format"); return; }
+
+  let matched = 0, unmatched = 0;
+
+  questions.forEach((q, i) => {
+    const pdfNum = questionNumbers[i] || q.pdfNum;
+    if (pdfNum && ansMap[pdfNum] !== undefined){
+      q.correct = ansMap[pdfNum];
+      matched++;
+    } else if (ansMap[i + 1] !== undefined){
+      q.correct = ansMap[i + 1];
+      matched++;
+    } else {
+      unmatched++;
+    }
+  });
+
+  renderQuestions();
+  renderPreview();
+  $("#answerStatus").textContent = `✅ Matched ${matched} of ${questions.length} (${unmatched} unmatched)`;
+  toast(`🔗 Applied ${matched} answers`);
+};
+
+$("#answerKey").addEventListener("input", () => {
+  const map = parseAnswerKey($("#answerKey").value);
+  const count = Object.keys(map).length;
+  $("#answerStatus").textContent = count ? `Detected ${count} answers` : "No answer key loaded";
+});
+
+/* ═══ 9. PREVIEW + EXPORT ═══ */
+function buildExportLines(){
+  const lines = ["# Subject | Chapter | Question | A | B | C | D | Correct | Year | Level"];
+  const escPipe = s => String(s || "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+  questions.forEach(q => {
+    lines.push([
+      escPipe(q.sub),
+      escPipe(q.chap),
+      escPipe(q.text),
+      escPipe(q.options[0]),
+      escPipe(q.options[1]),
+      escPipe(q.options[2]),
+      escPipe(q.options[3]),
+      q.correct,
+      q.year || "",
+      q.level || "both"
+    ].join(" | "));
+  });
+  return lines;
+}
+
+function renderPreview(){
+  if (!questions.length){
+    $("#previewBox").textContent = "(no questions yet)";
+    return;
+  }
+  const text = buildExportLines().join("\n");
+  $("#previewBox").innerHTML = text
+    .split("\n").map(l => l.startsWith("#") ? `<span class="cmt">${escapeHtml(l)}</span>` : escapeHtml(l))
+    .join("\n");
+  $("#exportStatus").textContent = `${questions.length} questions ready`;
+}
+
+$("#copyBtn").onclick = async () => {
+  if (!questions.length){ toast("⚠️ No questions"); return; }
+  const text = buildExportLines().join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`📋 Copied ${questions.length} questions`);
+  } catch (e){
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    toast(`📋 Copied ${questions.length} questions`);
+  }
+};
+
+$("#downloadBtn").onclick = () => {
+  if (!questions.length){ toast("⚠️ No questions"); return; }
+  const text = buildExportLines().join("\n");
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "extracted_pyqs_" + Date.now() + ".txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("⬇️ Downloaded " + questions.length + " questions");
+};
+
+$("#clearBtn").onclick = () => {
+  if (!confirm("Clear all extracted questions?")) return;
+  questions = [];
+  questionNumbers = [];
+  rawText = "";
+  $("#resultsBox").style.display = "none";
+  $("#status").textContent = "Ready — waiting for PDF";
+  $("#qlist").innerHTML = "";
+  $("#previewBox").textContent = "";
+  $("#answerKey").value = "";
+  $("#answerStatus").textContent = "No answer key loaded";
+  toast("🗑️ Cleared");
+};
+
+/* ═══ HELPERS ═══ */
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+
+console.log("✓ PDF → PYQ Converter ready");
+</script>
+</body>
+</html>
